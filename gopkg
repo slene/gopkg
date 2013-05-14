@@ -1,0 +1,123 @@
+#!/bin/bash
+
+GOROOT="`go env GOROOT 2>&1`"
+
+[ $? != 0 ] && echo "can not get your GOROOT, is go/bin in your env PATH ?"
+
+GOBIN=$GOROOT/bin
+GOCMD=$GOROOT/bin/go
+
+GOHOSTOS="`go env GOHOSTOS 2>&1`"
+GOHOSTARCH="`go env GOHOSTARCH 2>&1`"
+
+export GOPATH=$GOROOT/share
+
+PKGS=$GOROOT/share/pkgs
+
+if [ ! -e $GOPATH ]; then
+    mkdir $GOPATH
+fi
+
+if [ ! -e $PKGS ]; then
+    touch $PKGS
+fi
+
+cd $GOPATH
+
+OIFS=$IFS
+IFS='
+'
+REPOS="GOOS=$GOHOSTOS GOARCH=$GOHOSTARCH
+`ls $GOBIN|grep "_"|sed "s/^/GOOS=/"|sed "s/_/ GOARCH=/"`"
+IFS=$IFS
+
+run(){
+    $GOCMD $@
+}
+
+make_all(){
+    result="`pkg_list`"
+    if [ $? != 0 ]; then
+        echo $result
+        return 1
+    fi
+    [ "$result" == '' ] && echo "$PKGS is empty" && exit 1
+    cmd=$1
+    shift 1
+    for pkg in $result; do
+        if [ $cmd == 'install' ]; then
+            echo "------------------------------"   
+            for r in $REPOS; do
+                echo "$r $cmd $pkg $@"
+                eval "$r $GOCMD $cmd $@ $pkg"
+            done
+        else
+            echo "------------------------------"
+            echo "$cmd $pkg $@"
+            eval "$GOCMD $cmd $@ $pkg"
+        fi
+    done
+}
+
+make_one(){
+    cmd=$1
+    shift 1
+    if [ $cmd == 'install' ]; then
+        echo "------------------------------"
+        for r in $REPOS; do
+            echo "$r $cmd $@"
+            eval "$r $GOCMD $cmd $@"
+
+        done
+    else
+        echo "------------------------------"
+        echo "$cmd $@"
+        eval "$GOCMD $cmd $@"
+    fi
+}
+
+pkg_list(){
+    cat $PKGS
+}
+
+print_usage(){
+    echo 'help'
+}
+
+action=$1
+case "$action" in
+    get|build|clean|install)
+        case "$2" in
+            all)
+                shift 2
+                make_all $action $@
+            ;;
+            *)
+                shift 1
+                make_one $action $@
+            ;;
+        esac
+    ;;
+    list)
+        pkg_list
+    ;;
+    arches)
+        echo "support os and arch"
+        echo "$REPOS"
+    ;;
+    *)
+        echo "sample usage:"
+        echo "    gopkg [action] [command|pkgname] [args]"
+        echo ""
+        echo "    gopkg get github.com/astaxie/beego
+    gopkg get github.com/astaxie/beego -u
+    gopkg get all
+    gopkg get all -u
+    gopkg build all
+    gopkg build all -a
+    gopkg install all
+    gopkg clean all
+    gopkg list
+    gopkg arches"
+    ;;
+esac
