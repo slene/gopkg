@@ -1,6 +1,6 @@
 ###a sample pkg manager for golang/go
 
-copy `gopkg` to `/usr/local/go/bin` and `chmod u+x gopkg`
+copy `gopkg` to `$GOROOT/bin` and `chmod u+x gopkg`
 
 make sure your `go` command in your env PATH
 
@@ -26,3 +26,5 @@ sample command:
     gopkg clean all
     gopkg list
     gopkg arches
+
+all pkg will save to `$GOROOT/share` directory, and you can set `$GOROOT/share` to your `GOPATH` env
