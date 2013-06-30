@@ -67,7 +67,6 @@ make_one(){
         for r in $REPOS; do
             echo "$r $cmd $@"
             eval "$r $GOCMD $cmd $@"
-
         done
     else
         echo "------------------------------"
@@ -78,6 +77,7 @@ make_one(){
 
 pkg_list(){
     cat $PKGS
+    # $GOCMD list -f '{{if .Standard}}{{else}}{{.ImportPath}}{{end}}' all
 }
 
 print_usage(){
@@ -95,6 +95,14 @@ case "$action" in
             *)
                 shift 1
                 make_one $action $@
+                ret=$?
+                if [ $action = 'get' ]; then
+                    if [ "$ret" = '0' ]; then
+                        pkg="`echo "$1"|sed 's/\//\\\\\//g'`"
+                        sed -i "/^$pkg$/d" $PKGS
+                        echo "$1" >> $PKGS
+                    fi
+                fi
             ;;
         esac
     ;;
